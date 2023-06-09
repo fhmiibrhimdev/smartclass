@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use Tymon\JWTAuth\Facades\JWTAuth;
 use App\Http\Controllers\Controller;
@@ -17,23 +18,19 @@ class LoginController extends Controller
      */
     public function __invoke(Request $request)
     {
-        //set validation
         $validator = Validator::make($request->all(), [
             'email'     => 'required',
             'password'  => 'required'
         ]);
 
-        //if validation fails
         if ($validator->fails()) {
             return response()->json($validator->errors(), 422);
         }
 
-        //get credentials from request
         $credentials = $request->only('email', 'password');
         $remember = $request->boolean('remember');
 
-        //if auth failed
-        if(!$token = JWTAuth::attempt($credentials, ['remember' => $remember])) {
+        if(!$token = JWTAuth::attempt($credentials)) {
             return response()->json([
                 'success' => false,
                 'message' => 'Your email or password is wrong!'
@@ -42,7 +39,6 @@ class LoginController extends Controller
 
         $user = auth()->user();
 
-        // Check if user is active
         if (!$user->active) {
             return response()->json([
                 'success' => false,
@@ -57,7 +53,22 @@ class LoginController extends Controller
             $role = 'user';
         }
 
-        //if auth success
+        if ($remember) {
+            $rememberToken = Str::random(60);
+            $user->forceFill([
+                'remember_token' => hash('sha256', $rememberToken),
+            ])->save();
+
+            $cookie = cookie('remember_token', $rememberToken, 1440); // 1 hari (1440 menit)
+
+            return response()->json([
+                'success'   => true,
+                'user'      => $user,
+                'role'      => $role, 
+                'token'     => $token
+            ])->cookie($cookie);
+        }
+
         return response()->json([
             'success' => true,
             'user'    => $user,   

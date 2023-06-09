@@ -30,9 +30,10 @@ class LoginController extends Controller
 
         //get credentials from request
         $credentials = $request->only('email', 'password');
+        $remember = $request->boolean('remember');
 
         //if auth failed
-        if(!$token = JWTAuth::attempt($credentials)) {
+        if(!$token = JWTAuth::attempt($credentials, ['remember' => $remember])) {
             return response()->json([
                 'success' => false,
                 'message' => 'Your email or password is wrong!'
@@ -40,6 +41,14 @@ class LoginController extends Controller
         }
 
         $user = auth()->user();
+
+        // Check if user is active
+        if (!$user->active) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Your account is not active. Please contact the administrator.'
+            ], 403);
+        }
 
         $role = '';
         if ($user->hasRole('admin')) {

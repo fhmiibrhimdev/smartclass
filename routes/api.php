@@ -1,10 +1,13 @@
 <?php
 
-use App\Http\Controllers\GalleryController;
-use App\Http\Controllers\PersonalController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\ProductController;
+use App\Http\Controllers\Api\LoginController;
+use App\Http\Controllers\Api\LogoutController;
+use App\Http\Controllers\Api\PersonalController;
+use App\Http\Controllers\Api\RegisterController;
+use App\Http\Controllers\Api\ResetPasswordController;
+use App\Http\Controllers\Api\ForgotPasswordController;
 
 /*
 |--------------------------------------------------------------------------
@@ -20,11 +23,16 @@ use App\Http\Controllers\ProductController;
 
 Route::post('/register', App\Http\Controllers\Api\RegisterController::class)->name('register');
 Route::post('/login', App\Http\Controllers\Api\LoginController::class)->name('login');
+
 Route::middleware('auth:api')->get('/user', function (Request $request) {
     $user = $request->user(); $role = $user->hasRole('admin') ? 'admin' : 'user';
     $user->setAttribute('role', $role);
     return $user;
 });
+
+Route::post('forgot-password', [ForgotPasswordController::class, 'sendResetLinkEmail'])->name('forgot.password');
+Route::get('password-reset/{token}', [ResetPasswordController::class, 'showResetForm'])->name('password.reset');
+Route::post('password-reset', [ResetPasswordController::class, 'reset'])->name('password.update');
 
 Route::group(['middleware' => ['auth:api']], function () {
     Route::get('/user', function (Request $request) {
